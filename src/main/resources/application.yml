@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/ielts_ai
-    username: postgres
-    password: Koma2626
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ielts_ai}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:Koma2626}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
