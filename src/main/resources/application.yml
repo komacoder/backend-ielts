@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://dpg-d9tdud7avr4c73bljkf0-a:5432/ielts_ai_db
+    username: komacoder
+    password: AGEIVCzeM5DgaWgZd5D6whcKfY7st2bQ
   jpa:
     hibernate:
       ddl-auto: update
