@@ -24,7 +24,8 @@ public class RefreshToken {
     @Column(nullable = false)
     private Instant expiryDate;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
     private boolean revoked = false;
 
     @ManyToOne

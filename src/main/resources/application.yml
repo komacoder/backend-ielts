@@ -17,3 +17,9 @@ application:
     jwt:
       secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       expiration: 86400000
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:AQ.Ab8RN6JuRv93URpVu2X4fDt87KeBKwb3SZAL39UcZVWon0Mw}
+    base-url: https://generativelanguage.googleapis.com/v1beta
+    model: gemini-1.5-pro
