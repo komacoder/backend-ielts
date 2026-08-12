@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * Converts Spring Security and domain exceptions into structured RFC 7807 ProblemDetail
  * responses, preventing raw stack traces and 500 errors from leaking to clients.
  */
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.ieltsai.ielts_ai_backend")
 public class GlobalExceptionHandler {
 
     /**
