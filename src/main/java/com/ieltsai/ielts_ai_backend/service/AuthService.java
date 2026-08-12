@@ -35,12 +35,16 @@ public class AuthService {
             throw new RuntimeException("Email already exists");
         }
 
+        // Use the role supplied in the request, or fall back to USER for all self-registrations.
+        // Objects.requireNonNullElse is a clean null-coalescing alternative to an if/else block.
+        Role assignedRole = java.util.Objects.requireNonNullElse(request.getRole(), Role.USER);
+
         var user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER)  // All self-registered users get ROLE_USER. Admins are seeded separately.
+                .role(assignedRole)
                 .build();
-        
+
         userRepository.save(user);
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = createRefreshToken(user);
