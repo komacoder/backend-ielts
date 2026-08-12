@@ -26,12 +26,17 @@ public class SecurityConfig {
             // Auth endpoints (register, login, refresh, logout)
             "/api/v1/auth/**",
 
-            // SpringDoc / Swagger UI
-            "/v3/api-docs",          // exact root: returns the raw OpenAPI JSON
-            "/v3/api-docs/**",       // sub-paths: resolve $ref, yaml, etc.
-            "/swagger-ui.html",      // legacy redirect entry point
-            "/swagger-ui/**",        // Swagger UI SPA assets
-            "/webjars/**",           // JS/CSS/fonts served by SpringDoc via WebJars
+            // SpringDoc / Swagger UI endpoints (comprehensive list for Spring Boot 3)
+            "/v3/api-docs",
+            "/v3/api-docs/**",
+            "/v3/api-docs.yaml",
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/swagger-resources",
+            "/swagger-resources/**",
+            "/configuration/ui",
+            "/configuration/security",
+            "/webjars/**",
 
             // Spring Boot built-in error endpoint
             "/error"
