@@ -28,13 +28,23 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
+    /**
+     * Single-role model: every new user gets ROLE_USER by default.
+     * Admins are seeded directly or promoted in the database.
+     * The columnDefinition ensures no migration failure on existing tables.
+     */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
+    @Column(nullable = false, columnDefinition = "varchar(20) default 'USER'")
+    @Builder.Default
+    private Role role = Role.USER;
 
+    /**
+     * Returns the Spring Security authority derived from the role.
+     * Uses Role.getAuthority() so "ROLE_" prefix logic is centralised in the enum.
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        return List.of(new SimpleGrantedAuthority(role.getAuthority()));
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.ieltsai.ielts_ai_backend.dto.AuthenticationResponse;
 import com.ieltsai.ielts_ai_backend.dto.LoginRequest;
 import com.ieltsai.ielts_ai_backend.dto.RegisterRequest;
 import com.ieltsai.ielts_ai_backend.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -23,7 +24,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(
-            @RequestBody RegisterRequest request
+            @Valid @RequestBody RegisterRequest request   // @Valid triggers Bean Validation
     ) {
         AuthenticationResponse response = authService.register(request);
         ResponseCookie cookie = generateCookie(response.getRefreshToken());
@@ -34,7 +35,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> login(
-            @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request
     ) {
         AuthenticationResponse response = authService.login(request);
         ResponseCookie cookie = generateCookie(response.getRefreshToken());
@@ -63,7 +64,7 @@ public class AuthController {
         }
         ResponseCookie cookie = ResponseCookie.from("refresh_token", "")
                 .httpOnly(true)
-                .secure(true) // Should be false if not HTTPS in dev, but standard practice is true
+                .secure(true)
                 .path("/")
                 .maxAge(0)
                 .build();
@@ -75,9 +76,10 @@ public class AuthController {
     private ResponseCookie generateCookie(String refreshToken) {
         return ResponseCookie.from("refresh_token", refreshToken)
                 .httpOnly(true)
-                .secure(true) // Usually driven by application properties in production
+                .secure(true)
                 .path("/")
                 .maxAge(7 * 24 * 60 * 60)
                 .build();
     }
 }
+

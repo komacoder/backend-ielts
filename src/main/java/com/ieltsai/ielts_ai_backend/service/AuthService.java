@@ -38,7 +38,7 @@ public class AuthService {
         var user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.USER)
+                .role(Role.USER)  // All self-registered users get ROLE_USER. Admins are seeded separately.
                 .build();
         
         userRepository.save(user);
@@ -47,6 +47,8 @@ public class AuthService {
 
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
+                .email(user.getEmail())
+                .role(user.getRole())
                 .refreshToken(refreshToken.getToken())
                 .build();
     }
@@ -68,6 +70,8 @@ public class AuthService {
 
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
+                .email(user.getEmail())
+                .role(user.getRole())
                 .refreshToken(refreshToken.getToken())
                 .build();
     }
@@ -108,6 +112,8 @@ public class AuthService {
         
         return AuthenticationResponse.builder()
                 .accessToken(newAccessToken)
+                .email(user.getEmail())
+                .role(user.getRole())
                 .refreshToken(newRefreshToken.getToken())
                 .build();
     }
