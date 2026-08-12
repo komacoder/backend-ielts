@@ -73,21 +73,50 @@ public class AuthService {
     }
 
     private RefreshToken createRefreshToken(User user) {
-        var existingToken = refreshTokenRepository.findByUser(user);
-        RefreshToken refreshToken;
-        
-        if (existingToken.isPresent()) {
-            refreshToken = existingToken.get();
-            refreshToken.setToken(UUID.randomUUID().toString());
-            refreshToken.setExpiryDate(Instant.now().plusMillis(604800000));
-        } else {
-            refreshToken = RefreshToken.builder()
-                    .user(user)
-                    .token(UUID.randomUUID().toString())
-                    .expiryDate(Instant.now().plusMillis(604800000)) // 7 days
-                    .build();
-        }
+        RefreshToken refreshToken = RefreshToken.builder()
+                .user(user)
+                .token(UUID.randomUUID().toString())
+                .expiryDate(Instant.now().plusMillis(604800000)) // 7 days
+                .revoked(false)
+                .build();
         
         return refreshTokenRepository.save(refreshToken);
+    }
+
+    @Transactional
+    public AuthenticationResponse refreshToken(String token) {
+        RefreshToken existingToken = refreshTokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
+                
+        if (existingToken.isRevoked()) {
+            throw new RuntimeException("Refresh token is revoked");
+        }
+        
+        if (existingToken.getExpiryDate().compareTo(Instant.now()) < 0) {
+            existingToken.setRevoked(true);
+            refreshTokenRepository.save(existingToken);
+            throw new RuntimeException("Refresh token was expired");
+        }
+        
+        // Revoke the old token (Refresh Token Rotation)
+        existingToken.setRevoked(true);
+        refreshTokenRepository.save(existingToken);
+        
+        User user = existingToken.getUser();
+        String newAccessToken = jwtService.generateToken(user);
+        RefreshToken newRefreshToken = createRefreshToken(user);
+        
+        return AuthenticationResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken.getToken())
+                .build();
+    }
+
+    @Transactional
+    public void logout(String token) {
+        refreshTokenRepository.findByToken(token).ifPresent(existingToken -> {
+            existingToken.setRevoked(true);
+            refreshTokenRepository.save(existingToken);
+        });
     }
 }
