@@ -1,20 +1,19 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://dpg-d9tdud7avr4c73bljkf0-a:5432/ielts_ai_db
-    username: komacoder
-    password: AGEIVCzeM5DgaWgZd5D6whcKfY7st2bQ
+    url: jdbc:postgresql://ep-soft-salad-ayim5dy5-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+    username: neondb_owner
+    password: npg_TcLf8NHIjq5U
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
 application:
   security:
     jwt:
       secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-      expiration: 86400000 # a day
+      expiration: 86400000
