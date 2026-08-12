@@ -32,7 +32,7 @@ public class AuthService {
     @Transactional
     public AuthenticationResponse register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already exists");
+            throw new IllegalArgumentException("An account with this email already exists.");
         }
 
         // Use the role supplied in the request, or fall back to USER for all self-registrations.
@@ -59,17 +59,25 @@ public class AuthService {
 
     @Transactional
     public AuthenticationResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (org.springframework.security.core.AuthenticationException ex) {
+            // BadCredentialsException, UsernameNotFoundException, DisabledException, etc.
+            // Re-throw as a domain exception so the global handler returns 401 instead of 500.
+            throw new org.springframework.security.authentication.BadCredentialsException(
+                    "Invalid email or password", ex
+            );
+        }
+
         var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow();
-                
+                .orElseThrow(() -> new RuntimeException("User not found after authentication"));
+
         var jwtToken = jwtService.generateToken(user);
-        
         var refreshToken = createRefreshToken(user);
 
         return AuthenticationResponse.builder()

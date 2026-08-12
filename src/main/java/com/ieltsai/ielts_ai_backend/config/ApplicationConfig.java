@@ -29,6 +29,10 @@ public class ApplicationConfig {
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService());
         authProvider.setPasswordEncoder(passwordEncoder());
+        // By default DaoAuthenticationProvider hides UsernameNotFoundException and re-throws
+        // BadCredentialsException to prevent user enumeration. We keep this behaviour (true)
+        // so that both wrong-email and wrong-password produce the same 401 response.
+        // If you ever need to distinguish them internally, set this to false.
         return authProvider;
     }
 
