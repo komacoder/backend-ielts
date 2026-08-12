@@ -27,7 +27,8 @@ public class ApplicationConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService());
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService());
         authProvider.setPasswordEncoder(passwordEncoder());
         // By default DaoAuthenticationProvider hides UsernameNotFoundException and re-throws
         // BadCredentialsException to prevent user enumeration. We keep this behaviour (true)
