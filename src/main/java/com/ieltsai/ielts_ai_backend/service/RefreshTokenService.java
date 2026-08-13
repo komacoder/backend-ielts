@@ -30,15 +30,22 @@ public class RefreshTokenService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        Optional<RefreshToken> existingTokenOpt = refreshTokenRepository.findByUser(user);
+        // Use findByUserId to avoid Hibernate proxy matching quirks that cause findByUser to fail
+        Optional<RefreshToken> existingTokenOpt = refreshTokenRepository.findByUserId(userId);
         
         RefreshToken refreshToken;
         
         if (existingTokenOpt.isPresent()) {
+            // Token found, UPDATE it
             refreshToken = existingTokenOpt.get();
             refreshToken.setToken(UUID.randomUUID().toString());
             refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
         } else {
+            // Failsafe: clear any phantom records directly by ID to guarantee the INSERT succeeds
+            refreshTokenRepository.deleteByUserId(userId);
+            refreshTokenRepository.flush();
+
+            // Create NEW token
             refreshToken = new RefreshToken();
             refreshToken.setUser(user);
             refreshToken.setToken(UUID.randomUUID().toString());
