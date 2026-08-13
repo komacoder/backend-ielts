@@ -1,6 +1,7 @@
 package com.ieltsai.ielts_ai_backend.entity;
 
-import com.ieltsai.ielts_ai_backend.dto.writing.GeminiEvaluationResult;
+import com.ieltsai.ielts_ai_backend.dto.writing.CriteriaScoresDto;
+import com.ieltsai.ielts_ai_backend.dto.writing.WritingFeedbackData;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -8,7 +9,6 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 /**
  * Stores a user's essay submission and the full AI-generated evaluation result.
@@ -48,20 +48,20 @@ public class WritingAttempt {
     private double overallBand;
 
     /**
-     * Stores the four IELTS scoring criteria as a JSON map, e.g.:
-     * { "Task Response": 7.0, "Coherence & Cohesion": 6.5, ... }
+     * Stores the four IELTS scoring criteria as a JSONB object, e.g.:
+     * { "taskResponseOrAchievement": 7.0, "coherenceAndCohesion": 6.5, ... }
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
-    private Map<String, Double> criteriaScores;
+    private CriteriaScoresDto criteriaScores;
 
     /**
-     * Stores the full structured feedback from Gemini, including detected errors,
-     * correction suggestions, and overall recommendations.
+     * Stores the full structured feedback from Gemini as a JSONB object,
+     * including summary, strengths, weaknesses, detected errors, and recommendations.
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
-    private GeminiEvaluationResult.FeedbackDetails feedbackDetails;
+    private WritingFeedbackData feedbackDetails;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

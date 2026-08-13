@@ -72,14 +72,14 @@ public class WritingService {
      * 5. Return the structured feedback response to the caller.
      */
     @Transactional
-    public EssayFeedbackResponse submitEssay(SubmitEssayRequest request, User user) {
-        QuestionBank question = questionBankRepository.findById(request.questionId())
+    public WritingEvaluationResponseDto submitEssay(WritingSubmissionRequestDto request, User user) {
+        QuestionBank question = questionBankRepository.findById(request.getQuestionId())
                 .filter(QuestionBank::isActive)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Question with id=" + request.questionId() + " not found or is not active."
+                        "Question with id=" + request.getQuestionId() + " not found or is not active."
                 ));
 
-        String essayText = request.essayText().trim();
+        String essayText = request.getEssayText().trim();
         int wordCount = countWords(essayText);
         validateWordCount(wordCount, question.getTaskType());
 
@@ -92,6 +92,15 @@ public class WritingService {
                 question.getTaskType()
         );
 
+        // Map Gemini result to persistence structures
+        WritingFeedbackData feedbackData = WritingFeedbackData.builder()
+                .summary(evaluation.summary())
+                .strengths(evaluation.strengths())
+                .weaknesses(evaluation.weaknesses())
+                .errors(evaluation.errors())
+                .recommendations(evaluation.recommendations())
+                .build();
+
         WritingAttempt attempt = WritingAttempt.builder()
                 .user(user)
                 .question(question)
@@ -99,14 +108,14 @@ public class WritingService {
                 .wordCount(wordCount)
                 .overallBand(evaluation.overallBand())
                 .criteriaScores(evaluation.criteriaScores())
-                .feedbackDetails(evaluation.feedbackDetails())
+                .feedbackDetails(feedbackData)
                 .build();
 
         WritingAttempt saved = writingAttemptRepository.save(attempt);
         log.info("Saved writing attempt id={} for userId={} with band={}",
                 saved.getId(), user.getId(), saved.getOverallBand());
 
-        return toEssayFeedbackResponse(saved, question);
+        return toEvaluationResponse(saved, question);
     }
 
     /**
@@ -114,12 +123,24 @@ public class WritingService {
      * to prevent IDOR (Insecure Direct Object Reference) vulnerabilities.
      */
     @Transactional(readOnly = true)
-    public EssayFeedbackResponse getAttemptById(Long attemptId, User user) {
+    public WritingEvaluationResponseDto getAttemptById(Long attemptId, User user) {
         WritingAttempt attempt = writingAttemptRepository.findByIdAndUser(attemptId, user)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Writing attempt with id=" + attemptId + " not found for current user."
                 ));
-        return toEssayFeedbackResponse(attempt, attempt.getQuestion());
+        return toEvaluationResponse(attempt, attempt.getQuestion());
+    }
+
+    /**
+     * Retrieves the full writing history for the authenticated user,
+     * ordered by most recent submission first.
+     */
+    @Transactional(readOnly = true)
+    public List<WritingEvaluationResponseDto> getUserHistory(User user) {
+        return writingAttemptRepository.findAllByUserOrderBySubmittedAtDesc(user)
+                .stream()
+                .map(attempt -> toEvaluationResponse(attempt, attempt.getQuestion()))
+                .collect(Collectors.toList());
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -151,28 +172,22 @@ public class WritingService {
         return new QuestionResponse(q.getId(), q.getTitle(), q.getPromptText(), q.getTaskType(), q.getCreatedAt());
     }
 
-    private EssayFeedbackResponse toEssayFeedbackResponse(WritingAttempt attempt, QuestionBank question) {
-        GeminiEvaluationResult.FeedbackDetails fd = attempt.getFeedbackDetails();
+    private WritingEvaluationResponseDto toEvaluationResponse(WritingAttempt attempt, QuestionBank question) {
+        WritingFeedbackData fd = attempt.getFeedbackDetails();
 
-        List<EssayFeedbackResponse.DetectedError> errors = fd.errors() == null ? List.of() :
-                fd.errors().stream()
-                        .map(e -> new EssayFeedbackResponse.DetectedError(
-                                e.originalText(), e.correction(), e.explanation(), e.feedbackType()
-                        ))
-                        .collect(Collectors.toList());
-
-        EssayFeedbackResponse.FeedbackDetails responseFeedback =
-                new EssayFeedbackResponse.FeedbackDetails(errors, fd.recommendations());
-
-        return new EssayFeedbackResponse(
-                attempt.getId(),
-                question.getId(),
-                question.getTitle(),
-                attempt.getWordCount(),
-                attempt.getOverallBand(),
-                attempt.getCriteriaScores(),
-                responseFeedback,
-                attempt.getSubmittedAt()
-        );
+        return WritingEvaluationResponseDto.builder()
+                .attemptId(attempt.getId())
+                .questionId(question.getId())
+                .questionTitle(question.getTitle())
+                .wordCount(attempt.getWordCount())
+                .overallBand(attempt.getOverallBand())
+                .criteriaScores(attempt.getCriteriaScores())
+                .summary(fd.getSummary())
+                .strengths(fd.getStrengths())
+                .weaknesses(fd.getWeaknesses())
+                .errors(fd.getErrors())
+                .recommendations(fd.getRecommendations())
+                .submittedAt(attempt.getSubmittedAt())
+                .build();
     }
 }

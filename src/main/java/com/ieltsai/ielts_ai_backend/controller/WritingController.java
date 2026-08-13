@@ -1,8 +1,8 @@
 package com.ieltsai.ielts_ai_backend.controller;
 
-import com.ieltsai.ielts_ai_backend.dto.writing.EssayFeedbackResponse;
 import com.ieltsai.ielts_ai_backend.dto.writing.QuestionResponse;
-import com.ieltsai.ielts_ai_backend.dto.writing.SubmitEssayRequest;
+import com.ieltsai.ielts_ai_backend.dto.writing.WritingEvaluationResponseDto;
+import com.ieltsai.ielts_ai_backend.dto.writing.WritingSubmissionRequestDto;
 import com.ieltsai.ielts_ai_backend.entity.User;
 import com.ieltsai.ielts_ai_backend.service.WritingService;
 import jakarta.validation.Valid;
@@ -42,11 +42,23 @@ public class WritingController {
      * persists the result, and returns full structured feedback.
      */
     @PostMapping("/submit")
-    public ResponseEntity<EssayFeedbackResponse> submitEssay(
-            @Valid @RequestBody SubmitEssayRequest request,
+    public ResponseEntity<WritingEvaluationResponseDto> submitEssay(
+            @Valid @RequestBody WritingSubmissionRequestDto request,
             @AuthenticationPrincipal User currentUser
     ) {
         return ResponseEntity.ok(writingService.submitEssay(request, currentUser));
+    }
+
+    /**
+     * GET /api/v1/writing/history
+     * Returns the authenticated user's writing attempt history,
+     * ordered by most recent first.
+     */
+    @GetMapping("/history")
+    public ResponseEntity<List<WritingEvaluationResponseDto>> getUserHistory(
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return ResponseEntity.ok(writingService.getUserHistory(currentUser));
     }
 
     /**
@@ -55,7 +67,7 @@ public class WritingController {
      * to the authenticated user — other users' attempts cannot be accessed.
      */
     @GetMapping("/attempts/{id}")
-    public ResponseEntity<EssayFeedbackResponse> getAttempt(
+    public ResponseEntity<WritingEvaluationResponseDto> getAttempt(
             @PathVariable Long id,
             @AuthenticationPrincipal User currentUser
     ) {
