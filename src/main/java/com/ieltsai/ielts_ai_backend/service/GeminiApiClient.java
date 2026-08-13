@@ -82,7 +82,8 @@ public class GeminiApiClient {
 
         try {
             String rawResponse = webClient.post()
-                    .uri("/models/{model}:generateContent?key={key}", model, apiKey)
+                    .uri("/models/{model}:generateContent", model)
+                    .header("x-goog-api-key", apiKey)
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
