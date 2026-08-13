@@ -13,7 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/writing/topics")
 @RequiredArgsConstructor
-@Tag(name = "2. \uD83D\uDCDA Writing Topics", description = "Endpoints for exploring available writing topics")
+@Tag(name = "Writing Topics", description = "Endpoints for exploring available writing topics")
 public class WritingTopicController {
 
     private final WritingTopicService writingTopicService;

@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "4. \uD83D\uDD10 Authentication", description = "Endpoints for user registration, authentication, token refresh, and logout")
+@Tag(name = "Authentication", description = "Endpoints for user registration, authentication, token refresh, and logout")
 public class AuthController {
 
     private final AuthService authService;

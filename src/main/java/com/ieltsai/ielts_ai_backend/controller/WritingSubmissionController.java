@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/writing/submissions")
 @RequiredArgsConstructor
-@Tag(name = "1. ✍️ Writing Submissions", description = "Endpoints for submitting essays, viewing submission details, and managing history")
+@Tag(name = "Writing Submissions", description = "Endpoints for submitting essays, viewing submission details, and managing history")
 public class WritingSubmissionController {
 
     private final WritingService writingService;

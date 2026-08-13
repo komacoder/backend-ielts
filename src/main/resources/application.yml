@@ -44,3 +44,8 @@ gemini:
     generation:
       temperature: 0.2
       response-mime-type: application/json
+
+springdoc:
+  swagger-ui:
+    custom-css-url: "/swagger-custom.css"
+    custom-js-url: "/swagger-custom.js"

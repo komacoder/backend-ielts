@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.theme-dark {
+    --swagger-bg: #0D1117;
+    --swagger-card-bg: #161B22;
+    --swagger-text: #C9D1D9;
+    --swagger-primary: #58A6FF;
+    --swagger-border: #30363D;
+    
+    background-color: var(--swagger-bg);
+    color: var(--swagger-text);
+}
+
+body.theme-dark .swagger-ui {
+    color: var(--swagger-text);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Reset base typography for UI */
+body.theme-dark .swagger-ui * {
+    color: var(--swagger-text);
+    font-family: 'Inter', sans-serif;
+}
+
+body.theme-dark .swagger-ui .info h1, 
+body.theme-dark .swagger-ui .info h2,
+body.theme-dark .swagger-ui .info h3,
+body.theme-dark .swagger-ui .info h4,
+body.theme-dark .swagger-ui .info h5 {
+    color: #FFF;
+    font-family: 'Inter', sans-serif;
+}
+
+body.theme-dark .swagger-ui a {
+    color: var(--swagger-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+body.theme-dark .swagger-ui a:hover { color: #79C0FF; }
+
+/* Code and JSON payloads */
+body.theme-dark .swagger-ui .highlight-code,
+body.theme-dark .swagger-ui .model-box,
+body.theme-dark .swagger-ui code {
+    font-family: 'JetBrains Mono', monospace !important;
+    background-color: #0D1117;
+}
+
+body.theme-dark .swagger-ui .model {
+    color: var(--swagger-text);
+}
+
+/* Blocks */
+body.theme-dark .swagger-ui .opblock {
+    background: var(--swagger-card-bg);
+    border: 1px solid var(--swagger-border);
+    border-radius: 8px;
+    box-shadow: none;
+    margin: 0 0 15px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+body.theme-dark .swagger-ui .opblock:hover {
+    border-color: #484F58;
+}
+body.theme-dark .swagger-ui .opblock-summary {
+    border-bottom: none;
+    padding: 10px;
+}
+body.theme-dark .swagger-ui .opblock-summary-method {
+    border-radius: 6px;
+    font-weight: 600;
+}
+body.theme-dark .swagger-ui .opblock-summary-path {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Method Colors */
+body.theme-dark .swagger-ui .opblock-get { border-color: #30363D; background: rgba(88, 166, 255, 0.05); }
+body.theme-dark .swagger-ui .opblock-get .opblock-summary-method { background: #58A6FF; color: #0D1117; }
+body.theme-dark .swagger-ui .opblock-post { border-color: #30363D; background: rgba(63, 185, 80, 0.05); }
+body.theme-dark .swagger-ui .opblock-post .opblock-summary-method { background: #3FB950; color: #0D1117; }
+body.theme-dark .swagger-ui .opblock-put { border-color: #30363D; background: rgba(210, 153, 34, 0.05); }
+body.theme-dark .swagger-ui .opblock-put .opblock-summary-method { background: #D29922; color: #0D1117; }
+body.theme-dark .swagger-ui .opblock-delete { border-color: #30363D; background: rgba(248, 81, 73, 0.05); }
+body.theme-dark .swagger-ui .opblock-delete .opblock-summary-method { background: #F85149; color: #0D1117; }
+
+body.theme-dark .swagger-ui .opblock-body pre.microlight {
+    background-color: #0D1117 !important;
+    border-radius: 6px;
+}
+
+/* Forms and Inputs */
+body.theme-dark .swagger-ui table thead tr th,
+body.theme-dark .swagger-ui table tbody tr td {
+    border-color: var(--swagger-border);
+    color: var(--swagger-text);
+}
+body.theme-dark .swagger-ui input[type=text],
+body.theme-dark .swagger-ui select,
+body.theme-dark .swagger-ui textarea {
+    background-color: #0D1117;
+    border: 1px solid var(--swagger-border);
+    color: var(--swagger-text);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+}
+body.theme-dark .swagger-ui input[type=text]:focus,
+body.theme-dark .swagger-ui select:focus,
+body.theme-dark .swagger-ui textarea:focus {
+    border-color: var(--swagger-primary);
+    outline: none;
+}
+
+/* Buttons */
+body.theme-dark .swagger-ui .btn {
+    background-color: var(--swagger-card-bg);
+    border: 1px solid var(--swagger-border);
+    color: var(--swagger-text);
+    border-radius: 6px;
+    box-shadow: none;
+    transition: all 0.2s ease;
+}
+body.theme-dark .swagger-ui .btn:hover {
+    background-color: #30363D;
+    border-color: #8B949E;
+}
+body.theme-dark .swagger-ui .btn.execute {
+    background-color: var(--swagger-primary);
+    color: #0D1117;
+    border-color: var(--swagger-primary);
+    font-weight: 600;
+}
+body.theme-dark .swagger-ui .btn.execute:hover {
+    background-color: #79C0FF;
+    border-color: #79C0FF;
+}
+body.theme-dark .swagger-ui .btn.authorize {
+    border-color: #3FB950;
+    color: #3FB950;
+}
+body.theme-dark .swagger-ui .btn.authorize:hover {
+    background-color: rgba(63, 185, 80, 0.1);
+}
+
+body.theme-dark .swagger-ui .scheme-container {
+    background: transparent;
+    border-top: 1px solid var(--swagger-border);
+    border-bottom: 1px solid var(--swagger-border);
+    box-shadow: none;
+}
+
+/* Toggle */
+#theme-toggle {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: #161B22;
+    color: #C9D1D9;
+    border: 1px solid #30363D;
+    padding: 10px 16px;
+    border-radius: 50px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 9999;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#theme-toggle:hover {
+    background: #30363D;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+}
+
+body:not(.theme-dark) #theme-toggle {
+    background: #FFFFFF;
+    color: #24292F;
+    border: 1px solid #D0D7DE;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+body:not(.theme-dark) #theme-toggle:hover {
+    background: #F6F8FA;
+    border-color: #AFB8C1;
+}
+
+/* Light mode cleanups */
+body:not(.theme-dark) .swagger-ui { font-family: 'Inter', sans-serif; }
+body:not(.theme-dark) .swagger-ui .opblock { border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+body:not(.theme-dark) .swagger-ui .btn { border-radius: 6px; }
+body:not(.theme-dark) .swagger-ui .highlight-code,
+body:not(.theme-dark) .swagger-ui .model-box,
+body:not(.theme-dark) .swagger-ui code { font-family: 'JetBrains Mono', monospace !important; }

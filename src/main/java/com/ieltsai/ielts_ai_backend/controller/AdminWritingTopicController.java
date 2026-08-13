@@ -18,7 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/admin/writing/topics")
 @RequiredArgsConstructor
-@Tag(name = "3. \uD83D\uDD27 Admin Topic Management", description = "Admin endpoints for creating, updating, listing, and deleting writing topics")
+@Tag(name = "Admin Topic Management", description = "Admin endpoints for creating, updating, listing, and deleting writing topics")
 public class AdminWritingTopicController {
 
     private final WritingTopicService writingTopicService;
