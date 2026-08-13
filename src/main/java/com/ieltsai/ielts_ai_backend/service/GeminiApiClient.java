@@ -6,9 +6,11 @@ import com.ieltsai.ielts_ai_backend.dto.writing.GeminiEvaluationResult;
 import com.ieltsai.ielts_ai_backend.entity.TaskType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
 import java.util.Map;
@@ -29,27 +31,33 @@ import java.util.Map;
 @Service
 public class GeminiApiClient {
 
-    private final WebClient webClient;
+    private final RestClient restClient;
     private final ObjectMapper objectMapper;
-
-    @Value("${gemini.api.key}")
-    private String apiKey;
-
-    @Value("${gemini.api.model}")
-    private String model;
+    private final String model;
+    private final String apiKey;
 
     // Minimum word counts per IELTS task specification
     private static final int TASK_1_MIN_WORDS = 150;
     private static final int TASK_2_MIN_WORDS = 250;
 
     public GeminiApiClient(
-            @Value("${gemini.api.base-url}") String baseUrl
+            @Value("${gemini.api.base-url}") String baseUrl,
+            @Value("${gemini.api.key}") String apiKey,
+            @Value("${gemini.api.model}") String model
     ) {
-        this.webClient = WebClient.builder()
-                .baseUrl(baseUrl)
-                .defaultHeader("Content-Type", "application/json")
-                .build();
+        this.model = model;
+        this.apiKey = apiKey;
         this.objectMapper = new ObjectMapper();
+
+        // 1. Create a clean, isolated RestClient builder.
+        // It does NOT use a Spring-managed RestClient.Builder, meaning no global 
+        // OAuth2/JWT Bearer interceptors will be attached to these requests.
+        this.restClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                // Explicitly clear any Authorization header just in case to avoid 401 ACCESS_TOKEN_TYPE_UNSUPPORTED
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "")
+                .build();
     }
 
     /**
@@ -81,25 +89,32 @@ public class GeminiApiClient {
         );
 
         try {
-            String rawResponse = webClient.post()
-                    .uri("/models/{model}:generateContent", model)
-                    .header("x-goog-api-key", apiKey)
-                    .bodyValue(requestBody)
+            // 2 & 3. Pass API key safely and handle errors cleanly
+            String rawResponse = restClient.post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/models/{model}:generateContent")
+                            .queryParam("key", apiKey) // Pass strictly via query parameter as requested
+                            .build(model))
+                    .body(requestBody)
+                    // Explicitly strip any rogue Bearer tokens on the request level as well:
+                    .header(HttpHeaders.AUTHORIZATION, "") 
                     .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        String errorBody = new String(response.getBody().readAllBytes());
+                        log.error("Gemini API error: status={}, body={}", response.getStatusCode(), errorBody);
+                        throw new RuntimeException("Gemini API request failed with status " + response.getStatusCode() + ": " + errorBody);
+                    })
+                    .body(String.class);
 
             return parseGeminiResponse(rawResponse);
-        } catch (WebClientResponseException e) {
-            log.error("Gemini API error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (RestClientResponseException e) {
+            log.error("Gemini API connection error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new RuntimeException("Gemini API request failed: " + e.getMessage(), e);
         }
     }
 
     /**
      * Builds the system instruction that defines the AI evaluator's persona and rules.
-     * This is sent via Gemini's dedicated "system_instruction" field, ensuring strict
-     * isolation from user-provided content.
      */
     private String buildSystemInstruction(TaskType taskType) {
         String taskDescription = taskType == TaskType.TASK_1
@@ -157,7 +172,6 @@ public class GeminiApiClient {
 
     /**
      * Builds the user-facing message that includes the question and the essay.
-     * The essay text is strictly wrapped in XML delimiters to enforce evaluation scope.
      */
     private String buildUserMessage(String essay, String questionPrompt, TaskType taskType) {
         return """
@@ -186,7 +200,6 @@ public class GeminiApiClient {
     private GeminiEvaluationResult parseGeminiResponse(String rawResponse) {
         try {
             JsonNode root = objectMapper.readTree(rawResponse);
-            // Navigate: candidates[0].content.parts[0].text
             String jsonText = root
                     .path("candidates")
                     .get(0)
