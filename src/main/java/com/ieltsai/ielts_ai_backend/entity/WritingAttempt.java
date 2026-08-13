@@ -36,7 +36,7 @@ public class WritingAttempt {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "question_id", nullable = false)
-    private QuestionBank question;
+    private QuestionBank topic;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String essayText;

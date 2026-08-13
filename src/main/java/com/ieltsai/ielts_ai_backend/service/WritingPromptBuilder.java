@@ -38,15 +38,15 @@ public class WritingPromptBuilder {
      * Builds the user-facing message by filling placeholders in the YAML template.
      *
      * @param essayText      The student's raw essay text.
-     * @param questionPrompt The IELTS question/prompt text.
+     * @param topicPrompt    The IELTS topic/prompt text.
      * @param taskType       TASK_1 or TASK_2.
      * @return               The fully assembled user message string.
      */
-    public String buildUserMessage(String essayText, String questionPrompt, TaskType taskType) {
+    public String buildUserMessage(String essayText, String topicPrompt, TaskType taskType) {
         String taskLabel = taskType == TaskType.TASK_1 ? "Task 1" : "Task 2";
         return userMessageTemplate
                 .replace("{taskType}", taskLabel)
-                .replace("{questionPrompt}", questionPrompt)
+                .replace("{questionPrompt}", topicPrompt)
                 .replace("{essayText}", essayText);
     }
 }

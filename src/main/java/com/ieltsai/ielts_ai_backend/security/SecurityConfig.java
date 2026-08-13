@@ -25,6 +25,9 @@ public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
             // Auth endpoints (register, login, refresh, logout)
             "/api/v1/auth/**",
+            
+            // Public topic endpoints
+            "/api/v1/writing/topics/**",
 
             // SpringDoc / Swagger UI endpoints (comprehensive list for Spring Boot 3)
             "/v3/api-docs",

@@ -5,9 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * Request DTO for admin to create a new writing question.
+ * Request DTO for admin to create a new writing topic.
  */
-public record CreateQuestionRequest(
+public record CreateTopicRequest(
         @NotBlank(message = "Title must not be blank")
         String title,
 

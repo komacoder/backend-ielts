@@ -24,11 +24,11 @@ public class QuestionBank {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String title;
+    @Column(name = "title", nullable = false)
+    private String topicTitle;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String promptText;
+    @Column(name = "prompt_text", nullable = false, columnDefinition = "TEXT")
+    private String topicPrompt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

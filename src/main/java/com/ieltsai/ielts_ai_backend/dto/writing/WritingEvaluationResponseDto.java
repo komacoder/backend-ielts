@@ -12,8 +12,8 @@ import java.util.List;
 @Builder
 public class WritingEvaluationResponseDto {
     private Long attemptId;
-    private Long questionId;
-    private String questionTitle;
+    private Long topicId;
+    private String topicTitle;
     private Integer wordCount;
     private Double overallBand;
     private CriteriaScoresDto criteriaScores;

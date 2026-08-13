@@ -11,7 +11,14 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.http.client.ReactorClientHttpRequestFactory;
+import reactor.netty.http.client.HttpClient;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
 
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -53,10 +60,18 @@ public class GeminiApiClient {
         this.promptBuilder = promptBuilder;
         this.objectMapper = new ObjectMapper();
 
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 60000)
+                .responseTimeout(Duration.ofSeconds(60))
+                .doOnConnected(conn -> 
+                    conn.addHandlerLast(new ReadTimeoutHandler(60, TimeUnit.SECONDS))
+                        .addHandlerLast(new WriteTimeoutHandler(60, TimeUnit.SECONDS)));
+
         // Isolated RestClient — no Spring-managed builder, no global interceptors
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .requestFactory(new ReactorClientHttpRequestFactory(httpClient))
                 .build();
     }
 
@@ -68,7 +83,7 @@ public class GeminiApiClient {
      * @param taskType       The IELTS task type (TASK_1 or TASK_2).
      * @return               A structured {@link GeminiEvaluationResult}.
      */
-    public GeminiEvaluationResult evaluate(String essay, String questionPrompt, TaskType taskType) {
+    public GeminiEvaluationResult evaluate(String essay, String topicPrompt, TaskType taskType) {
         String systemInstruction = promptBuilder.getSystemInstruction() + """
                 
                 ## OUTPUT FORMAT
@@ -109,7 +124,7 @@ public class GeminiApiClient {
                 The overallBand must be the mean of the four criteriaScores, rounded to the nearest 0.5.
                 Identify at least 3 and at most 10 errors. Provide 3–5 recommendations.
                 """;
-        String userMessage = promptBuilder.buildUserMessage(essay, questionPrompt, taskType);
+        String userMessage = promptBuilder.buildUserMessage(essay, topicPrompt, taskType);
 
         Map<String, Object> requestBody = Map.of(
                 "system_instruction", Map.of(

@@ -10,8 +10,8 @@ import lombok.*;
 @AllArgsConstructor
 public class WritingSubmissionRequestDto {
 
-    @NotNull(message = "Question ID must be provided")
-    private Long questionId;
+    @NotNull(message = "Topic ID must be provided")
+    private Long topicId;
 
     @NotBlank(message = "Essay text must not be blank")
     private String essayText;

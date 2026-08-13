@@ -13,16 +13,20 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Tag(name = "4. \uD83D\uDD10 Authentication", description = "Endpoints for user registration, authentication, token refresh, and logout")
 public class AuthController {
 
     private final AuthService authService;
 
     @PostMapping("/register")
+    @Operation(summary = "Register a new user", description = "Registers a new user and returns access and refresh tokens.")
     public ResponseEntity<AuthenticationResponse> register(
             @Valid @RequestBody RegisterRequest request   // @Valid triggers Bean Validation
     ) {
@@ -34,6 +38,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Login an existing user", description = "Authenticates a user and returns access and refresh tokens.")
     public ResponseEntity<AuthenticationResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
@@ -45,6 +50,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token", description = "Refreshes the access token using a valid refresh token from a cookie.")
     public ResponseEntity<AuthenticationResponse> refresh(
             @CookieValue(name = "refresh_token") String refreshToken
     ) {
@@ -56,6 +62,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @Operation(summary = "Logout user", description = "Revokes the refresh token and clears the authentication cookie.")
     public ResponseEntity<?> logout(
             @CookieValue(name = "refresh_token", required = false) String refreshToken
     ) {
