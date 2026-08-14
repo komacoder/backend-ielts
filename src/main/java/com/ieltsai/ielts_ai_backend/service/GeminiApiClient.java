@@ -84,46 +84,7 @@ public class GeminiApiClient {
      * @return               A structured {@link GeminiEvaluationResult}.
      */
     public GeminiEvaluationResult evaluate(String essay, String topicPrompt, TaskType taskType) {
-        String systemInstruction = promptBuilder.getSystemInstruction() + """
-                
-                ## OUTPUT FORMAT
-                You MUST respond with a single, valid JSON object matching this exact schema. Do not include any
-                text, markdown, or explanation outside the JSON object:
-                
-                {
-                  "overallBand": <number with one decimal, e.g. 6.5>,
-                  "criteriaScores": {
-                    "taskResponseOrAchievement": <0.0–9.0>,
-                    "coherenceAndCohesion": <0.0–9.0>,
-                    "lexicalResource": <0.0–9.0>,
-                    "grammaticalRangeAndAccuracy": <0.0–9.0>
-                  },
-                  "summary": "<overall summary of performance>",
-                  "strengths": [
-                    "<strength 1>",
-                    "<strength 2>"
-                  ],
-                  "weaknesses": [
-                    "<weakness 1>",
-                    "<weakness 2>"
-                  ],
-                  "errors": [
-                    {
-                      "originalText": "<exact excerpt from the essay>",
-                      "correction": "<suggested corrected version>",
-                      "explanation": "<clear explanation of the error>",
-                      "feedbackType": "<one of: GRAMMAR, LEXICAL, COHERENCE, TASK_RESPONSE>"
-                    }
-                  ],
-                  "recommendations": [
-                    "<actionable improvement tip 1>",
-                    "<actionable improvement tip 2>"
-                  ]
-                }
-                
-                The overallBand must be the mean of the four criteriaScores, rounded to the nearest 0.5.
-                Identify at least 3 and at most 10 errors. Provide 3–5 recommendations.
-                """;
+        String systemInstruction = promptBuilder.getSystemInstruction();
         String userMessage = promptBuilder.buildUserMessage(essay, topicPrompt, taskType);
 
         Map<String, Object> requestBody = Map.of(
@@ -141,6 +102,9 @@ public class GeminiApiClient {
                         "temperature", temperature
                 )
         );
+
+        log.info("Sending evaluation request to Gemini API for taskType={} (Prompt Length: {}, Essay Length: {})",
+                taskType, topicPrompt.length(), essay.length());
 
         try {
             String rawResponse = restClient.post()
