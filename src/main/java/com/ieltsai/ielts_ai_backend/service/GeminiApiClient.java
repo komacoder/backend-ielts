@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ieltsai.ielts_ai_backend.dto.writing.GeminiEvaluationResult;
 import com.ieltsai.ielts_ai_backend.entity.TaskType;
+import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -41,20 +43,20 @@ public class GeminiApiClient {
     private final ObjectMapper objectMapper;
     private final WritingPromptBuilder promptBuilder;
     private final String model;
-    private final String apiKey;
+
+    @Value("${gemini.api.key:}")
+    private String apiKey;
     private final double temperature;
     private final String responseMimeType;
 
     public GeminiApiClient(
             @Value("${gemini.api.base-url}") String baseUrl,
-            @Value("${gemini.api.key}") String apiKey,
             @Value("${gemini.api.model}") String model,
             @Value("${gemini.api.generation.temperature}") double temperature,
             @Value("${gemini.api.generation.response-mime-type}") String responseMimeType,
             WritingPromptBuilder promptBuilder
     ) {
         this.model = model;
-        this.apiKey = apiKey;
         this.temperature = temperature;
         this.responseMimeType = responseMimeType;
         this.promptBuilder = promptBuilder;
@@ -73,6 +75,20 @@ public class GeminiApiClient {
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
                 .requestFactory(new ReactorClientHttpRequestFactory(httpClient))
                 .build();
+    }
+
+    @PostConstruct
+    public void init() {
+        if (this.apiKey == null || this.apiKey.trim().isEmpty()) {
+            try {
+                Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+                this.apiKey = dotenv.get("GEMINI_API_KEY");
+            } catch (Exception ignored) {}
+        }
+        if (this.apiKey == null || this.apiKey.trim().isEmpty()) {
+            this.apiKey = System.getenv("GEMINI_API_KEY");
+        }
+        log.info("GeminiApiClient initialized. API key configured: {}", (this.apiKey != null && !this.apiKey.isBlank()));
     }
 
     /**
