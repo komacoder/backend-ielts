@@ -146,8 +146,8 @@ public class GeminiApiClient {
             String rawResponse = restClient.post()
                     .uri(uriBuilder -> uriBuilder
                             .path("/models/{model}:generateContent")
-                            .queryParam("key", apiKey)
                             .build(model))
+                    .header("x-goog-api-key", apiKey)
                     .body(requestBody)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) -> {
