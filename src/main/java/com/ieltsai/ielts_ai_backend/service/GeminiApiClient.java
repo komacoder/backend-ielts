@@ -2,6 +2,7 @@ package com.ieltsai.ielts_ai_backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ieltsai.ielts_ai_backend.dto.speaking.SpeakingEvaluationResponseDto;
 import com.ieltsai.ielts_ai_backend.dto.writing.GeminiEvaluationResult;
 import com.ieltsai.ielts_ai_backend.entity.TaskType;
 import io.github.cdimascio.dotenv.Dotenv;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.http.client.ReactorClientHttpRequestFactory;
 import reactor.netty.http.client.HttpClient;
@@ -20,7 +22,9 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 
 import java.time.Duration;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -63,11 +67,11 @@ public class GeminiApiClient {
         this.objectMapper = new ObjectMapper();
 
         HttpClient httpClient = HttpClient.create()
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 60000)
-                .responseTimeout(Duration.ofSeconds(60))
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15_000)   // 15s connect
+                .responseTimeout(Duration.ofSeconds(120))                // 120s overall response
                 .doOnConnected(conn -> 
-                    conn.addHandlerLast(new ReadTimeoutHandler(60, TimeUnit.SECONDS))
-                        .addHandlerLast(new WriteTimeoutHandler(60, TimeUnit.SECONDS)));
+                    conn.addHandlerLast(new ReadTimeoutHandler(120, TimeUnit.SECONDS))   // 120s read
+                        .addHandlerLast(new WriteTimeoutHandler(60, TimeUnit.SECONDS))); // 60s write
 
         // Isolated RestClient — no Spring-managed builder, no global interceptors
         this.restClient = RestClient.builder()
@@ -147,6 +151,198 @@ public class GeminiApiClient {
         }
     }
 
+    // ───────────────────────────────────────────────────────────────────────
+    //  SPEAKING MODULE — Multimodal Audio Evaluation & Question Generation
+    // ───────────────────────────────────────────────────────────────────────
+
+    /**
+     * Evaluates an IELTS Speaking audio recording using Gemini's multimodal API.
+     *
+     * @param audioBytes  Raw audio file bytes.
+     * @param mimeType    MIME type of the audio (audio/ogg, audio/webm, audio/mp3, audio/wav).
+     * @param taskContext Contextual description of which part is being evaluated.
+     * @return A structured {@link SpeakingEvaluationResponseDto}.
+     */
+    public SpeakingEvaluationResponseDto evaluateSpeakingAudio(byte[] audioBytes, String mimeType, String taskContext) {
+        // ── Step 1: Encode audio ──────────────────────────────────────────────
+        log.info("Encoding audio to Base64 (raw size: {} bytes)", audioBytes.length);
+        String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
+        log.debug("Base64-encoded audio length: {} chars", base64Audio.length());
+
+        // ── Step 2: Build prompt ──────────────────────────────────────────────
+        String prompt = """
+                You are an official IELTS Speaking Examiner. Analyze this candidate's audio recording.
+                
+                1. Evaluate the speech on the 4 IELTS criteria:
+                   - Fluency & Coherence
+                   - Lexical Resource
+                   - Grammatical Range & Accuracy
+                   - Pronunciation
+                2. Provide estimated Band scores (0.0 - 9.0) for each criterion and an Overall Band Score.
+                3. Extract notable spoken sentences with:
+                   - grammatical corrections
+                   - vocabulary enhancements
+                   - pronunciation feedback
+                
+                Context: %s
+                
+                Return ONLY a valid JSON object matching this exact schema (no markdown, no extra text):
+                {
+                  "criteriaAnalysis": {
+                    "fluencyAndCoherence": { "score": <number>, "analysis": "<string>" },
+                    "lexicalResource": { "score": <number>, "analysis": "<string>" },
+                    "grammaticalRangeAndAccuracy": { "score": <number>, "analysis": "<string>" },
+                    "pronunciation": { "score": <number>, "analysis": "<string>" }
+                  },
+                  "overallBandScore": <number>,
+                  "notableSentences": [
+                    {
+                      "originalSpeech": "<string>",
+                      "grammaticalCorrection": "<string>",
+                      "vocabularyEnhancement": "<string>",
+                      "pronunciationFeedback": "<string>"
+                    }
+                  ]
+                }
+                """.formatted(taskContext);
+
+        // ── Step 3: Construct multimodal inlineData payload ───────────────────
+        Map<String, Object> inlineData = new HashMap<>();
+        inlineData.put("mimeType", mimeType);
+        inlineData.put("data", base64Audio);
+
+        Map<String, Object> audioPart = new HashMap<>();
+        audioPart.put("inlineData", inlineData);
+
+        Map<String, Object> textPart = new HashMap<>();
+        textPart.put("text", prompt);
+
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", List.of(textPart, audioPart));
+
+        Map<String, Object> generationConfig = new HashMap<>();
+        generationConfig.put("responseMimeType", "application/json");
+        generationConfig.put("temperature", temperature);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("contents", List.of(content));
+        requestBody.put("generationConfig", generationConfig);
+
+        // ── Step 4: Send to Gemini API ────────────────────────────────────────
+        log.info("Sending audio payload to Gemini API (model={}, mimeType={}, audioSize={} bytes)",
+                model, mimeType, audioBytes.length);
+
+        try {
+            String rawResponse = restClient.post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/models/{model}:generateContent")
+                            .build(model))
+                    .header("x-goog-api-key", apiKey)
+                    .body(requestBody)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        String errorBody = new String(response.getBody().readAllBytes());
+                        log.error("Gemini Speaking API HTTP error: status={}, body={}",
+                                response.getStatusCode(), errorBody);
+                        throw new RuntimeException(
+                                "Gemini API speaking evaluation failed with status "
+                                + response.getStatusCode() + ": " + errorBody
+                        );
+                    })
+                    .body(String.class);
+
+            log.info("Gemini Speaking API responded successfully (responseLength={} chars)",
+                    rawResponse != null ? rawResponse.length() : 0);
+            log.debug("Gemini raw response: {}", rawResponse);
+
+            return parseSpeakingResponse(rawResponse);
+
+        } catch (RestClientResponseException e) {
+            log.error("Gemini Speaking API HTTP error: status={}, body={}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("Gemini Speaking API request failed (HTTP "
+                    + e.getStatusCode() + "): " + e.getResponseBodyAsString(), e);
+
+        } catch (ResourceAccessException e) {
+            log.error("Gemini Speaking API timeout/connection error: {}", e.getMessage());
+            throw new RuntimeException(
+                    "Gemini Speaking API request timed out or connection refused: " + e.getMessage(), e);
+
+        } catch (Exception e) {
+            log.error("Unexpected error during Gemini Speaking API call: {}", e.getMessage(), e);
+            throw new RuntimeException(
+                    "Unexpected error calling Gemini Speaking API: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Generates IELTS Speaking Part 1, Part 2, and Part 3 questions via the Gemini text API.
+     *
+     * @return A JSON string containing the generated questions.
+     */
+    public String generateSpeakingQuestions() {
+        String prompt = """
+                You are an IELTS Speaking Examiner. Generate a realistic set of IELTS Speaking test questions.
+                
+                Return ONLY a valid JSON object (no markdown, no extra text) with this structure:
+                {
+                  "part1": {
+                    "topic": "<topic name>",
+                    "questions": ["<question1>", "<question2>", "<question3>", "<question4>"]
+                  },
+                  "part2": {
+                    "cueCard": "<the cue card topic and bullet points>",
+                    "followUp": "<a follow-up question>"
+                  },
+                  "part3": {
+                    "topic": "<abstract discussion topic related to Part 2>",
+                    "questions": ["<question1>", "<question2>", "<question3>"]
+                  }
+                }
+                """;
+
+        Map<String, Object> textPart = Map.of("text", prompt);
+        Map<String, Object> content = Map.of("parts", List.of(textPart));
+
+        Map<String, Object> generationConfig = new HashMap<>();
+        generationConfig.put("responseMimeType", "application/json");
+        generationConfig.put("temperature", temperature);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("contents", List.of(content));
+        requestBody.put("generationConfig", generationConfig);
+
+        log.info("Sending speaking question generation request to Gemini API");
+
+        try {
+            String rawResponse = restClient.post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/models/{model}:generateContent")
+                            .build(model))
+                    .header("x-goog-api-key", apiKey)
+                    .body(requestBody)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        String errorBody = new String(response.getBody().readAllBytes());
+                        log.error("Gemini question gen API error: status={}, body={}", response.getStatusCode(), errorBody);
+                        throw new RuntimeException(
+                                "Gemini API question generation failed with status " + response.getStatusCode() + ": " + errorBody
+                        );
+                    })
+                    .body(String.class);
+
+            return extractTextFromGeminiResponse(rawResponse);
+        } catch (RestClientResponseException e) {
+            log.error("Gemini question gen API connection error: status={}, body={}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("Gemini question generation request failed: " + e.getMessage(), e);
+        }
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    //  Response Parsing Helpers
+    // ───────────────────────────────────────────────────────────────────────
+
     /**
      * Extracts the JSON payload from Gemini's response envelope, strips any
      * residual markdown wrappers, and maps it to {@link GeminiEvaluationResult}.
@@ -168,6 +364,38 @@ public class GeminiApiClient {
             throw new RuntimeException(
                     "Could not parse Gemini AI evaluation response. Raw response: " + rawResponse, e
             );
+        }
+    }
+
+    /**
+     * Parses Gemini's speaking evaluation response into a structured DTO.
+     */
+    private SpeakingEvaluationResponseDto parseSpeakingResponse(String rawResponse) {
+        try {
+            String jsonText = extractTextFromGeminiResponse(rawResponse);
+            return objectMapper.readValue(jsonText, SpeakingEvaluationResponseDto.class);
+        } catch (Exception e) {
+            log.error("Failed to parse Gemini speaking response: {}", rawResponse);
+            throw new RuntimeException(
+                    "Could not parse Gemini speaking evaluation response. Raw response: " + rawResponse, e
+            );
+        }
+    }
+
+    /**
+     * Extracts the raw text content from the first candidate in a Gemini response.
+     */
+    private String extractTextFromGeminiResponse(String rawResponse) {
+        try {
+            JsonNode root = objectMapper.readTree(rawResponse);
+            String jsonText = root
+                    .path("candidates").get(0)
+                    .path("content").path("parts").get(0)
+                    .path("text").asText();
+            return stripMarkdownWrapper(jsonText);
+        } catch (Exception e) {
+            log.error("Failed to extract text from Gemini response: {}", rawResponse);
+            throw new RuntimeException("Could not extract text from Gemini response", e);
         }
     }
 
